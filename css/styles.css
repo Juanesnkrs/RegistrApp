@@ -1,0 +1,23 @@
+/* ==========================================================
+   RegistrApp - Estilos personalizados
+   (Tailwind cubre la mayoría; aquí solo lo que no cubre)
+   ========================================================== */
+
+/* Cumplimiento de tamaño mínimo de área táctil */
+button,
+a,
+input,
+select {
+    min-height: 44px;
+}
+
+/* Scrollbar personalizado para la tabla */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
