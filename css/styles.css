@@ -1,17 +1,13 @@
 /* ==========================================================
    RegistrApp - Estilos personalizados
-   (Tailwind cubre la mayoría; aquí solo lo que no cubre)
    ========================================================== */
-
-/* Cumplimiento de tamaño mínimo de área táctil */
 button,
-a,
-input,
-select {
+select,
+input:not([type="checkbox"]):not([type="radio"]) {
     min-height: 44px;
 }
 
-/* Scrollbar personalizado para la tabla */
+/* Scrollbar personalizado (tabla, carrito) */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -20,4 +16,33 @@ select {
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 4px;
+}
+
+/* Transición suave al mostrar una vista (SPA) */
+@keyframes view-fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-view {
+    animation: view-fade-in 0.25s ease-out;
+}
+
+/* Notificaciones (feedback visual) */
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.toast-in {
+    animation: toast-in 0.2s ease-out;
+    transition: opacity 0.3s ease;
+}
+
+/* Respeta la preferencia de "reducir movimiento" del sistema */
+@media (prefers-reduced-motion: reduce) {
+    .animate-view,
+    .toast-in {
+        animation: none;
+    }
 }
