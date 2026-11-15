@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RegistrApp | Módulo CRUD de Inventario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+
+    <header class="bg-indigo-700 text-white shadow-md">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">RegistrApp</h1>
+                <p class="text-xs text-indigo-200">Módulo de Gestión de Inventario (Node.js + Express + PostgreSQL)</p>
+            </div>
+            <span class="bg-indigo-900 text-indigo-100 text-xs px-3 py-1 rounded-full font-medium">
+                Esquema: registrapp_db
+            </span>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Formulario de Creación / Actualización -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h2 id="tituloFormulario" class="text-lg font-semibold text-slate-800 mb-4">Registrar Nuevo Producto</h2>
+
+            <form id="formularioProducto" class="space-y-4">
+                <input type="hidden" id="idProducto">
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">ID Categoría</label>
+                    <input type="number" id="idCategoria" value="1" min="1" required
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Producto</label>
+                    <input type="text" id="nombreProducto" placeholder="Ej: Arroz Diana 500g" required
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Precio Compra ($)</label>
+                        <input type="number" id="precioCompra" step="0.01" min="0" placeholder="2000" required
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Precio Venta ($)</label>
+                        <input type="number" id="precioVenta" step="0.01" min="0" placeholder="2600" required
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Stock Actual</label>
+                    <input type="number" id="stockActual" min="0" placeholder="50" required
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" id="botonGuardar"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition">
+                        Guardar Producto
+                    </button>
+                    <button type="button" id="botonCancelar" onclick="reiniciarFormulario()"
+                        class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-4 rounded-lg transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Tabla de Consulta, Edición y Eliminación -->
+        <section class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-slate-800">Inventario Registrado en PostgreSQL</h2>
+                <button onclick="cargarProductos()"
+                    class="text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition">
+                    Actualizar Lista
+                </button>
+            </div>
+
+            <div id="alertaEstado" class="hidden mb-4 p-3 rounded-lg text-sm font-medium"></div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 bg-slate-50">
+                            <th class="py-3 px-4">ID</th>
+                            <th class="py-3 px-4">Producto</th>
+                            <th class="py-3 px-4">Cat.</th>
+                            <th class="py-3 px-4">Compra</th>
+                            <th class="py-3 px-4">Venta</th>
+                            <th class="py-3 px-4">Stock</th>
+                            <th class="py-3 px-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaProductos" class="divide-y divide-slate-100 text-sm">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = '/api/productos';
+        const formularioProducto = document.getElementById('formularioProducto');
+        const tablaProductos = document.getElementById('tablaProductos');
+        const alertaEstado = document.getElementById('alertaEstado');
+
+        function mostrarAlerta(mensaje, esExito = true) {
+            alertaEstado.textContent = mensaje;
+            alertaEstado.className = `mb-4 p-3 rounded-lg text-sm font-medium ${esExito ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                }`;
+            setTimeout(() => alertaEstado.classList.add('hidden'), 4000);
+        }
+
+        // READ: Consultar todos los productos
+        async function cargarProductos() {
+            try {
+                const respuesta = await fetch(API_URL);
+                const resultado = await respuesta.json();
+
+                tablaProductos.innerHTML = '';
+
+                if (!resultado.datos || resultado.datos.length === 0) {
+                    tablaProductos.innerHTML = `
+            <tr>
+              <td colspan="7" class="py-6 text-center text-slate-400">No hay productos registrados en la base de datos.</td>
+            </tr>`;
+                    return;
+                }
+
+                resultado.datos.forEach((producto) => {
+                    const fila = document.createElement('tr');
+                    fila.className = 'hover:bg-slate-50 transition';
+                    fila.innerHTML = `
+            <td class="py-3 px-4 font-semibold text-slate-700">#${producto.id_producto}</td>
+            <td class="py-3 px-4 font-medium text-slate-900">${producto.nombre_producto}</td>
+            <td class="py-3 px-4 text-slate-600">${producto.id_categoria}</td>
+            <td class="py-3 px-4 text-slate-600">$${Number(producto.precio_compra).toLocaleString('es-CO')}</td>
+            <td class="py-3 px-4 text-emerald-700 font-medium">$${Number(producto.precio_venta).toLocaleString('es-CO')}</td>
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${producto.stock_actual > 10 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }">${producto.stock_actual} und</span>
+            </td>
+            <td class="py-3 px-4 text-right space-x-2">
+              <button onclick='prepararEdicion(${JSON.stringify(producto)})'
+                class="text-indigo-600 hover:text-indigo-900 font-medium text-xs">Editar</button>
+              <button onclick="eliminarProducto(${producto.id_producto})"
+                class="text-rose-600 hover:text-rose-900 font-medium text-xs">Eliminar</button>
+            </td>
+          `;
+                    tablaProductos.appendChild(fila);
+                });
+            } catch (error) {
+                mostrarAlerta('No se pudo conectar con el servidor.', false);
+            }
+        }
+
+        // CREATE / UPDATE: Guardar o actualizar producto
+        formularioProducto.addEventListener('submit', async (evento) => {
+            evento.preventDefault();
+
+            const idProducto = document.getElementById('idProducto').value;
+            const cuerpoPeticion = {
+                idCategoria: document.getElementById('idCategoria').value,
+                nombreProducto: document.getElementById('nombreProducto').value,
+                precioCompra: document.getElementById('precioCompra').value,
+                precioVenta: document.getElementById('precioVenta').value,
+                stockActual: document.getElementById('stockActual').value
+            };
+
+            const metodoHttp = idProducto ? 'PUT' : 'POST';
+            const urlDestino = idProducto ? `${API_URL}/${idProducto}` : API_URL;
+
+            try {
+                const respuesta = await fetch(urlDestino, {
+                    method: metodoHttp,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cuerpoPeticion)
+                });
+                const resultado = await respuesta.json();
+
+                if (resultado.exito) {
+                    mostrarAlerta(resultado.mensaje, true);
+                    reiniciarFormulario();
+                    cargarProductos();
+                } else {
+                    mostrarAlerta(resultado.mensaje, false);
+                }
+            } catch (error) {
+                mostrarAlerta('Error al procesar la solicitud.', false);
+            }
+        });
+
+        function prepararEdicion(producto) {
+            document.getElementById('idProducto').value = producto.id_producto;
+            document.getElementById('idCategoria').value = producto.id_categoria;
+            document.getElementById('nombreProducto').value = producto.nombre_producto;
+            document.getElementById('precioCompra').value = producto.precio_compra;
+            document.getElementById('precioVenta').value = producto.precio_venta;
+            document.getElementById('stockActual').value = producto.stock_actual;
+
+            document.getElementById('tituloFormulario').textContent = `Editando Producto #${producto.id_producto}`;
+            document.getElementById('botonGuardar').textContent = 'Actualizar Producto';
+            document.getElementById('botonCancelar').classList.remove('hidden');
+        }
+
+        function reiniciarFormulario() {
+            formularioProducto.reset();
+            document.getElementById('idProducto').value = '';
+            document.getElementById('idCategoria').value = '1';
+            document.getElementById('tituloFormulario').textContent = 'Registrar Nuevo Producto';
+            document.getElementById('botonGuardar').textContent = 'Guardar Producto';
+            document.getElementById('botonCancelar').classList.add('hidden');
+        }
+
+        // DELETE: Eliminar producto
+        async function eliminarProducto(idProducto) {
+            if (!confirm(`¿Deseas eliminar el producto #${idProducto}?`)) return;
+
+            try {
+                const respuesta = await fetch(`${API_URL}/${idProducto}`, { method: 'DELETE' });
+                const resultado = await respuesta.json();
+
+                if (resultado.exito) {
+                    mostrarAlerta(resultado.mensaje, true);
+                    cargarProductos();
+                } else {
+                    mostrarAlerta(resultado.mensaje, false);
+                }
+            } catch (error) {
+                mostrarAlerta('Error al eliminar el producto.', false);
+            }
+        }
+
+        cargarProductos();
+    </script>
+</body>
+
+</html>
